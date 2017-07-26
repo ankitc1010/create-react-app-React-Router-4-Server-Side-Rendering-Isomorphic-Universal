@@ -7,16 +7,18 @@ import { StaticRouter as Router } from 'react-router-dom'
 import React from 'react'
 import { renderToString } from 'react-dom/server'
 import sourceMapSupport from 'source-map-support'
-
+import Helmet from 'react-helmet'
+import compression from 'compression'
 sourceMapSupport.install()
+
 
 // import About from '../src/components/About'
 // import Home from '../src/components/Home'
 // import NotFound from '../src/components/NotFound'
-import App from '../src/App'
-//import render from './render'
+import App from '../App'
+// import render from './render'
 const PORT = process.env.PORT || 9000
-const filePath = path.resolve(__dirname, '..', 'build', 'index.html')
+const filePath = path.resolve(__dirname, '..', '..', 'build', 'index.html')
 const options = {
   key: fs.readFileSync(path.resolve(__dirname, 'server.key')),
   cert: fs.readFileSync(path.resolve(__dirname, 'server.crt'))
@@ -24,8 +26,9 @@ const options = {
 
 var app = express()
 
+app.use(compression())
 app.use(morgan(':remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] :response-time ms'))
-app.use('/static',express.static(path.join(__dirname, '..', 'build', 'static')))
+app.use('/static', express.static(path.join(__dirname, '..', '..', 'build', 'static')))
 
 app.get('*', (req, res) => {
   // res.sendFile(path.resolve(__dirname, '..', 'build', 'index.html'))
@@ -38,8 +41,11 @@ app.get('*', (req, res) => {
         <Router context={{}} location={req.url}>
           <App />
         </Router>))
-      const RenderedApp = htmlData.replace('{{SSR}}', ReactApp)
-      res.status(200).send(RenderedApp)
+          const head = Helmet.renderStatic()
+      const BodyReplace = htmlData.replace('{{SSR}}', ReactApp)
+      const TitleReplace = BodyReplace.replace('{{TITLE}}', head.title.toString())
+      const FinalRenderedApp = TitleReplace.replace('{{META}}', head.meta.toString())
+      res.status(200).send(FinalRenderedApp)
     }
   })
 })
